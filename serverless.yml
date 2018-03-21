@@ -1,0 +1,41 @@
+service: AlarmClock
+
+provider:
+  name: aws
+  runtime: nodejs6.10
+  region: eu-central-1
+  profile: leanovate
+  iamRoleStatements:
+    $ref: ./iamRoleStatements.json
+
+functions:
+  set-alarm:
+    handler: AlarmClock.set
+    events:
+      - http:
+          path: alarm
+          method: post
+    environment:
+      TARGET_ARN:
+        Fn::Join:
+        - ':'
+        - - arn
+          - aws
+          - lambda
+          - Ref: AWS::Region
+          - Ref: AWS::AccountId
+          - function
+          - ${self:service}-${self:provider.stage}-trigger-alarm
+  
+  trigger-alarm:
+    handler: AlarmClock.alarm
+    events:
+      - http:
+          path: alarm
+          method: put
+      - cloudwatchEvent:
+          event:
+            source:
+              - "aws.events"
+            detail-type:
+              - "Scheduled Event"
